@@ -1,7 +1,7 @@
 import argparse
 from unionb import SuperLayer
 from datasets import build_dataset
-from torch.utils.data import DataLoader, Dataset
+import os
 
 
 def get_args_parser():
@@ -10,7 +10,7 @@ def get_args_parser():
     parser.add_argument('--num_classes', type=int, default=4, help='Number of Classes')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch Size')
     parser.add_argument('--data_path', type=str, default='/scratch/projects/multirater/chaoyang/',
-                                        help='path of dataset.')
+                                                   help='path of dataset.')
     parser.add_argument('--start_epoch', type=int, default=0, help='Start Epoch')
     parser.add_argument('--epochs', type=int, default=100, help='epoch numbers of training')
     parser.add_argument('--lr', type=float, default=1e-4, help='the learning rate')
@@ -38,6 +38,10 @@ def get_args_parser():
                         help='patience epochs for Plateau LR scheduler (default: 10')
     parser.add_argument('--decay-rate', '--dr', type=float, default=0.1, metavar='RATE',
                         help='LR decay rate (default: 0.1)')
+
+    parser.add_argument('--save_checkpoint', type=bool, default=True, help='Save the checkpoint...')
+    parser.add_argument('--checkpoint_dir', type=str, default='./models/unionb', help='The dir for saving checkpoint.')
+
     return parser
 
 
@@ -47,6 +51,11 @@ def main():
     print(args)
     print("Start Training...")
 
+    if not os.path.exists(args.checkpoint_dir):
+        # Create the directory
+        os.makedirs(args.checkpoint_dir)
+        print('== Creating the paths for saving the checkpoints...')
+
     train_dataloader = build_dataset(is_train=True, args=args)
     test_dataloader = build_dataset(is_train=False, args=args)
 
@@ -54,8 +63,7 @@ def main():
 
     for epoch in range(args.start_epoch, args.epochs):
         model.train_one_epoch(train_dataloader, epoch)
-        model.test(test_dataloader, epoch)
-
+        model.val(test_dataloader, epoch)
 
     model.save_matrix()
 

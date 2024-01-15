@@ -7,18 +7,20 @@ from model import make_network
 from timm.scheduler import create_scheduler
 import utils
 from sklearn.metrics import accuracy_score
+import os
 
 
 class SuperLayer(nn.Module):
     def __init__(self, args):
         super(SuperLayer, self).__init__()
+        self.args = args
         self.model = make_network(args)
-        self.num_classes = args.num_classes
-        self.device = torch.device(args.device)
-        self.learning_rate = args.lr
-        self.expert_num = args.expert_num
-        self.dataset_name = args.dataset
-        self.batch_size = args.batch_size
+        self.num_classes = self.args.num_classes
+        self.device = torch.device(self.args.device)
+        self.learning_rate = self.args.lr
+        self.expert_num = self.args.expert_num
+        self.dataset_name = self.args.dataset
+        self.batch_size = self.args.batch_size
 
         self.model.add_module("super",
                               nn.Linear(self.num_classes, self.expert_num * self.num_classes, bias=False))
@@ -27,14 +29,14 @@ class SuperLayer(nn.Module):
         self.eye = torch.eye(self.num_classes).to(self.device)
 
         # TODO: Add one lr_scheduler.
-        if args.optimizer == 'Adam':
+        if self.args.optimizer == 'Adam':
             self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        elif args.optimizer == 'SGD':
+        elif self.args.optimizer == 'SGD':
             self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         else:
             raise ValueError("Please Check the optimizer for training...")
 
-        self.lr_scheduler, _ = create_scheduler(args, self.optimizer)
+        self.lr_scheduler, _ = create_scheduler(self.args, self.optimizer)
 
         self.fc_layer = self.model.fc
 
@@ -42,7 +44,7 @@ class SuperLayer(nn.Module):
         self.model.train()
         total_loss = 0
 
-        for batch_idx, (img, gt_label, eps) in enumerate(tqdm(train_loader)):
+        for batch_idx, (img, gt_label, eps) in enumerate(train_loader):
 
             ep = eps.to(self.device)  # ep is the annotators' labels.
             img = img.to(self.device)
@@ -55,8 +57,15 @@ class SuperLayer(nn.Module):
             # TODO: add the lr_scheduler.
             total_loss += loss
 
-        self.lr_scheduler.step(epoch)
+        if self.args.save_checkpoint:
+            checkpoint = {
+                'epoch': epoch,
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+            }
+            torch.save(checkpoint, os.path.join(self.args.checkpoint_dir, 'unionb_checkpoint_{}.pth'.format(epoch)))
 
+        self.lr_scheduler.step(epoch)
         print('Epoch: {} | total_loss: {:.4f}'.format(epoch, total_loss))
 
     def train_batch_new(self, images, ep):
@@ -87,8 +96,11 @@ class SuperLayer(nn.Module):
         else:
             raise ValueError("please check the dataset_name again")
 
+    # In fact, we just would like to get the target labels.
+    # we thought that the generated labels would be better than the majority-voted labels provided by original dataset.
+
     @torch.no_grad()
-    def test(self, test_loader, epoch):
+    def val(self, test_loader, epoch):
         criterion = torch.nn.CrossEntropyLoss()
         metric_logger = utils.MetricLogger(delimiter="  ")
 
