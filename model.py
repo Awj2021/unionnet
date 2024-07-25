@@ -22,7 +22,6 @@ class VGG(nn.Module):
     def forward(self, x):
         out = self.features(x)
         out = out.view(out.size(0), -1)
-        ipdb.set_trace()
         out = self.classifier(out)
         return F.softmax(out, dim=1)
 
@@ -43,16 +42,22 @@ class VGG(nn.Module):
 
 def make_network(args):
     if args.network == 'resnet18':
-        network = models.resnet18(pretrained=True)
+        network = models.resnet18(pretrained=args.pretrained)
     elif args.network == 'resnet34':
-        network = models.resnet34(pretrained=True)
+        network = models.resnet34(pretrained=args.pretrained)
     elif args.network == 'resnet50':
-        network = models.resnet50(pretrained=True)
+        network = models.resnet50(pretrained=args.pretrained)
     elif args.network == 'resnet101':
-        network = models.resnet101(pretrained=True)
+        network = models.resnet101(pretrained=args.pretrained)
     else:
         raise ValueError('=== Please check the proper network for training...')
 
+    if args.dataset == 'cifar10n':
+        network.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        # network.fc = nn.Linear(network.fc.in_features, args.num_classes)
+        # return network
+        network.maxpool = nn.Identity()
+        
     network.fc = torch.nn.Sequential(
         torch.nn.Linear(network.fc.in_features, args.num_classes),
         torch.nn.Softmax(dim=1))
