@@ -50,12 +50,14 @@ def get_args_parser():
 
     # set the parameters for the dataset.
     parser.add_argument('--noisy_type', type=str, default='multi_rater', choices=['clean', 'multi_rater'], help='Type of noise')
-    parser.add_argument('--data_aug', type=bool, default=False, help='Whether to use data augmentation')
+    parser.add_argument('--data_aug', type=bool, default=True, help='Whether to use data augmentation')
     parser.add_argument('--aug_data_dir', type=str, default='./cifar-10-batches-py/gen_samples_and_lab_disagree_x1.pt', 
                         help='Path of data augmentation files.')
     parser.add_argument('--noise_path', type=str, default='./cifar-10-batches-py/CIFAR-10_human.pt',
                         help='the multi-rater noise data path.')
     parser.add_argument('--config_file', type=str, default='./configs/cifar10n.yaml', help='The config file to set the specific parameters.')
+    parser.add_argument('--p_name', type=str, default='disagreementx4', help='The name of the this running.')
+    parser.add_argument('--project', type=str, default='unionb_wo_transform', help='The project name for wandb.')
     return parser
 
 
@@ -69,7 +71,7 @@ def main():
     
     args_dict.update(config)
     args = argparse.Namespace(**args_dict)
-    wandb.init(project='unionb', config=args)
+    wandb.init(project=args.project, name=args.p_name, config=args)  # the project name is unionb_wo_transform: without data tranformation during training.
 
     print("Start Training...")
 

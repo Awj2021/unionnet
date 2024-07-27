@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 import os
 import wandb
 import ipdb
-
+from torchmetrics.classification import MulticlassCalibrationError
 
 class SuperLayer(nn.Module):
     def __init__(self, args):
@@ -47,7 +47,9 @@ class SuperLayer(nn.Module):
         total_loss = 0
 
         for i, (img, eps) in enumerate(train_loader):
+            # ipdb.set_trace()
             eps = F.one_hot(eps, num_classes=self.num_classes).float()
+            # ipdb.set_trace()
             ep = eps.to(self.device)  # ep is the annotators' labels.
             img = img.to(self.device)
 
@@ -68,7 +70,15 @@ class SuperLayer(nn.Module):
                 'model_state_dict': self.model.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
             }
-            torch.save(checkpoint, os.path.join(self.args.checkpoint_dir, self.args.dataset, 'unionb_checkpoint_{}.pth'.format(epoch)))
+            if self.args.data_aug:
+                # dataset_setting_name = self.args.aug_data_dir.basename().split('.')[0]
+                dataset_setting_name = os.path.basename(self.args.aug_data_dir).split('.')[0]
+            else:
+                dataset_setting_name = 'without_data_aug'
+            checkpoint_dir = os.path.join(self.args.checkpoint_dir, self.args.dataset, dataset_setting_name)
+            if not os.path.exists(checkpoint_dir):
+                os.makedirs(checkpoint_dir)
+            torch.save(checkpoint, os.path.join(checkpoint_dir, 'unionb_checkpoint_{}.pth'.format(epoch)))
 
         self.lr_scheduler.step(epoch)
         print('*' * 50)
@@ -136,10 +146,17 @@ class SuperLayer(nn.Module):
             total_accuracy += acc1 * img.shape[0]
             total_samples += img.shape[0]
             print('Iter: {} / {}  Acc: {:.3f}'.format(batch_idx, len(test_loader), acc1))
+            metrics = MulticlassCalibrationError(num_classes=self.num_classes, n_bins=5, norm='l1')
+            metrics.update(y_hat.float(), gt_label)
+            # ipdb.set_trace()
             hook.remove()
-
+        # Get the calibration error
+        calibration_error = metrics.compute()
+        # fig_, ax_ = metrics.plot()        
+        # fig_.savefig(f"./calibration_{epoch}.png")
         avg_loss_hat = loss_hat / len(test_loader)
         avg_accuracy = total_accuracy / total_samples
-        wandb.log({"epoch": epoch, "val_avg_loss": avg_loss_hat, "val_avg_accuracy": avg_accuracy})
+        wandb.log({"epoch": epoch, "val_avg_loss": avg_loss_hat, "val_avg_accuracy": avg_accuracy, "calibration_error": calibration_error})
+        # wandb.log({"epoch": epoch, "val_avg_loss": avg_loss_hat, "val_avg_accuracy": avg_accuracy})
         print(f'Epoch : {epoch}  Average y_hat loss: {avg_loss_hat}')
         print(f'Epoch : {epoch}  Average Accuracy: {avg_accuracy}')

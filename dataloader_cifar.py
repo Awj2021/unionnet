@@ -8,8 +8,15 @@ from cifar import CIFAR10_MR # just setting the multi rater dataset.
 def load_mr_data(batchsize:int, numworkers:int, args):
     trans = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
         ])
+    
+    # trans = transforms.Compose([
+    #         transforms.RandomHorizontalFlip(),
+    #         transforms.RandomCrop(32, padding=4),
+    #         transforms.ToTensor(),
+    #         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261))])
+    
     data_train = CIFAR10_MR(
                         root = './',
                         train = True,
@@ -33,8 +40,13 @@ def load_mr_data(batchsize:int, numworkers:int, args):
 def load_clean_test_data(batchsize:int, numworkers:int) -> DataLoader:
     trans = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
         ])
+    
+    # trans = transforms.Compose([
+    #         transforms.ToTensor(),
+    #         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+    #     ])
     data_test = CIFAR10(
                         root = './',
                         train = False,
