@@ -32,46 +32,48 @@ class Chaoyang(Dataset):
         if self.is_train:  # is_train = True => Train.
             imgs = []
             labels = []
-            label_1 = []
+            # label_1 = []
             label_2 = []
             label_3 = []
-            json_path = os.path.join(self.data_path, 'json', 'train.json')
+            json_path = os.path.join(self.data_path, 'json', 'train_label.json')
             with open(json_path, 'r') as f:
                 load_list = json.load(f)
                 for i in range(len(load_list)):
                     img_path = os.path.join(self.data_path, load_list[i]["name"])
                     imgs.append(img_path)
                     labels.append(load_list[i]["label"])
-                    label_1.append(load_list[i]["label_A"])
+                    # label_1.append(load_list[i]["label_A"])
                     label_2.append(load_list[i]["label_B"])
                     label_3.append(load_list[i]["label_C"])
 
             self.train_data, self.train_labels = np.array(imgs), np.array(labels)
 
-            self.eps = torch.cat((F.one_hot(torch.tensor(label_1), num_classes=args.num_classes).unsqueeze(1),
-                                  F.one_hot(torch.tensor(label_2), num_classes=args.num_classes).unsqueeze(1),
+            # self.eps = torch.cat((F.one_hot(torch.tensor(label_1), num_classes=args.num_classes).unsqueeze(1),
+            #                       F.one_hot(torch.tensor(label_2), num_classes=args.num_classes).unsqueeze(1),
+            #                       F.one_hot(torch.tensor(label_3), num_classes=args.num_classes).unsqueeze(1)), dim=1)
+            self.eps = torch.cat((F.one_hot(torch.tensor(label_2), num_classes=args.num_classes).unsqueeze(1),
                                   F.one_hot(torch.tensor(label_3), num_classes=args.num_classes).unsqueeze(1)), dim=1)
         else:
             imgs = []
             labels = []
-            label_1 = []
-            label_2 = []
-            label_3 = []
-            json_path = os.path.join(self.data_path, 'json', 'test.json')
+            # label_1 = []
+            # label_2 = []
+            # label_3 = []
+            json_path = os.path.join(self.data_path, 'json', 'test_ori.json')
             with open(json_path, 'r') as f:
                 load_list = json.load(f)
                 for i in range(len(load_list)):
                     img_path = os.path.join(self.data_path, load_list[i]["name"])
                     imgs.append(img_path)
                     labels.append(load_list[i]["label"])
-                    label_1.append(load_list[i]["label_A"])
-                    label_2.append(load_list[i]["label_B"])
-                    label_3.append(load_list[i]["label_C"])
+                    # label_1.append(load_list[i]["label_A"])
+                    # label_2.append(load_list[i]["label_B"])
+                    # label_3.append(load_list[i]["label_C"])
             self.test_data, self.test_labels = np.array(imgs), np.array(labels)
 
-            self.eps = torch.cat((F.one_hot(torch.tensor(label_1), num_classes=args.num_classes).unsqueeze(1),
-                                  F.one_hot(torch.tensor(label_2), num_classes=args.num_classes).unsqueeze(1),
-                                  F.one_hot(torch.tensor(label_3), num_classes=args.num_classes).unsqueeze(1)), dim=1)
+            # self.eps = torch.cat((F.one_hot(torch.tensor(label_1), num_classes=args.num_classes).unsqueeze(1),
+            #                       F.one_hot(torch.tensor(label_2), num_classes=args.num_classes).unsqueeze(1),
+            #                       F.one_hot(torch.tensor(label_3), num_classes=args.num_classes).unsqueeze(1)), dim=1)
 
     def __getitem__(self, item):
         if self.is_train:
@@ -86,8 +88,8 @@ class Chaoyang(Dataset):
             img, gt_label = self.test_data[item], self.test_labels[item]
             img = Image.open(img).convert('RGB')
             img = self.test_transform(img)
-            eps = self.eps[item]
-            return img, gt_label, eps
+            # eps = self.eps[item]
+            return img, gt_label
             # return img, gt_label
 
     def __len__(self):

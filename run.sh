@@ -3,7 +3,7 @@
 set -e
 
 # Running UnionNet-B
-python main.py
+CUDA_VISIBLE_DEVICES=1 python main.py --wandb
 
 # Running UnionNet-A
 

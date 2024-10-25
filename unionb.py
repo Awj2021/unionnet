@@ -8,7 +8,7 @@ from timm.scheduler import create_scheduler
 import utils
 from sklearn.metrics import accuracy_score
 import os
-
+import wandb
 
 class SuperLayer(nn.Module):
     def __init__(self, args):
@@ -67,6 +67,7 @@ class SuperLayer(nn.Module):
 
         self.lr_scheduler.step(epoch)
         print('Epoch: {} | total_loss: {:.4f}'.format(epoch, total_loss))
+        wandb.log({"Train Loss": total_loss})
 
     def train_batch_new(self, images, ep):
         y_hat = self.model(images)
@@ -112,7 +113,7 @@ class SuperLayer(nn.Module):
             nonlocal y_hat
             y_hat = o.detach()
 
-        for batch_idx, (img, gt_label, eps) in enumerate(test_loader):
+        for batch_idx, (img, gt_label) in enumerate(test_loader):
             img = img.to(self.device)
             gt_label = gt_label.to(self.device)  # y_hat
 
@@ -131,5 +132,7 @@ class SuperLayer(nn.Module):
             hook.remove()
 
         avg_loss_hat = loss_hat / len(test_loader.dataset)
-        print(f'Epoch : {epoch}  Average y_hat loss: {avg_loss_hat}')
-        print(f'Epoch : {epoch}, Average Accuracy: {metric_logger.acc1}')
+        
+        print(f'Epoch : {epoch}  Val Average y_hat loss: {avg_loss_hat}')
+        print(f'Epoch : {epoch}, Val Average Accuracy: {metric_logger.acc1.avg}')
+        wandb.log({"Val Average y_hat loss": avg_loss_hat, "Val Average Accuracy": metric_logger.acc1.avg})

@@ -2,19 +2,19 @@ import argparse
 from unionb import SuperLayer
 from datasets import build_dataset
 import os
-
+import wandb
 
 def get_args_parser():
     parser = argparse.ArgumentParser('PVT training and evaluation script', add_help=False)
-    parser.add_argument('--expert_num', type=int, default=3, help='Number of experts')
+    parser.add_argument('--expert_num', type=int, default=2, help='Number of experts')
     parser.add_argument('--num_classes', type=int, default=4, help='Number of Classes')
-    parser.add_argument('--batch_size', type=int, default=8, help='Batch Size')
-    parser.add_argument('--data_path', type=str, default='/scratch/projects/multirater/chaoyang/',
+    parser.add_argument('--batch_size', type=int, default=32, help='Batch Size')
+    parser.add_argument('--data_path', type=str, default='/home/wenjie/projects/DivideMix/chaoyang',
                                                    help='path of dataset.')
     parser.add_argument('--start_epoch', type=int, default=0, help='Start Epoch')
     parser.add_argument('--epochs', type=int, default=100, help='epoch numbers of training')
     parser.add_argument('--lr', type=float, default=1e-4, help='the learning rate')
-    parser.add_argument('--network', type=str, default='resnet50', help='Type of network.')
+    parser.add_argument('--network', type=str, default='resnet34', help='Type of network.')
     parser.add_argument('--device', default='cuda', help='device to use for training / testing')
 
     parser.add_argument('--dataset', type=str, default='Chaoyang', help='Dataset Name')
@@ -41,12 +41,15 @@ def get_args_parser():
 
     parser.add_argument('--save_checkpoint', type=bool, default=True, help='Save the checkpoint...')
     parser.add_argument('--checkpoint_dir', type=str, default='./models/unionb', help='The dir for saving checkpoint.')
+    parser.add_argument('--wandb', action='store_true', help='use wandb to log the training process.')
 
     return parser
 
 
 def main():
     args = get_args_parser().parse_args()
+    running_name = 'unionb_{}_{}_{}'.format(args.dataset, args.network, args.expert_num)
+    wandb.init(project='chaoyang_unionb', name=running_name, config=args) if args.wandb else None
 
     print(args)
     print("Start Training...")
