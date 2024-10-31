@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import ipdb
 from torchvision import models
-
+from PreResNet import *
 
 class VGG(nn.Module):
     def __init__(self, args):
@@ -42,18 +42,21 @@ class VGG(nn.Module):
 
 
 def make_network(args):
-    if args.network == 'resnet18':
-        network = models.resnet18(pretrained=True)
-    elif args.network == 'resnet34':
-        network = models.resnet34(pretrained=True)
-    elif args.network == 'resnet50':
-        network = models.resnet50(pretrained=True)
-    elif args.network == 'resnet101':
-        network = models.resnet101(pretrained=True)
-    else:
-        raise ValueError('=== Please check the proper network for training...')
+    if args.dataset == 'Chaoyang':
+        if args.network == 'resnet18':
+            network = models.resnet18(pretrained=True)
+        elif args.network == 'resnet34':
+            network = models.resnet34(pretrained=True)
+        elif args.network == 'resnet50':
+            network = models.resnet50(pretrained=True)
+        elif args.network == 'resnet101':
+            network = models.resnet101(pretrained=True)
+        else:
+            raise ValueError('=== Please check the proper network for training...')
 
-    network.fc = torch.nn.Sequential(
-        torch.nn.Linear(network.fc.in_features, args.num_classes),
-        torch.nn.Softmax(dim=1))
+        network.fc = torch.nn.Sequential(
+            torch.nn.Linear(network.fc.in_features, args.num_classes),
+            torch.nn.Softmax(dim=1))
+    elif args.dataset == 'cifar100':
+        network = ResNet18(args.num_classes)
     return network

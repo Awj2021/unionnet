@@ -11,10 +11,11 @@ def get_args_parser():
     parser.add_argument('--batch_size', type=int, default=32, help='Batch Size')
     parser.add_argument('--data_path', type=str, default='/home/wenjie/projects/DivideMix/chaoyang',
                                                    help='path of dataset.')
+    parser.add_argument('--noise_file', type=str, default='cifar100_noisy_labels_noise_50.pt',)
     parser.add_argument('--start_epoch', type=int, default=0, help='Start Epoch')
-    parser.add_argument('--epochs', type=int, default=100, help='epoch numbers of training')
+    parser.add_argument('--epochs', type=int, default=300, help='epoch numbers of training')
     parser.add_argument('--lr', type=float, default=1e-4, help='the learning rate')
-    parser.add_argument('--network', type=str, default='resnet34', help='Type of network.')
+    parser.add_argument('--network', type=str, default='resnet18', help='Type of network.')
     parser.add_argument('--device', default='cuda', help='device to use for training / testing')
 
     parser.add_argument('--dataset', type=str, default='Chaoyang', help='Dataset Name')
@@ -22,7 +23,7 @@ def get_args_parser():
     parser.add_argument('--optimizer', type=str, default='Adam', help='Optimizer for training.')
 
     # Optimizer, Following the PVT (Pyramid Transformer Network.) settting.
-    parser.add_argument('--sched', default='step', type=str, metavar='SCHEDULER',
+    parser.add_argument('--sched', default='cosine', type=str, metavar='SCHEDULER',
                         help='LR scheduler (default: "cosine"')
     parser.add_argument('--warmup-lr', type=float, default=1e-6, metavar='LR',
                         help='warmup learning rate (default: 1e-6)')
@@ -42,33 +43,37 @@ def get_args_parser():
     parser.add_argument('--save_checkpoint', type=bool, default=True, help='Save the checkpoint...')
     parser.add_argument('--checkpoint_dir', type=str, default='./models/unionb', help='The dir for saving checkpoint.')
     parser.add_argument('--wandb', action='store_true', help='use wandb to log the training process.')
+    parser.add_argument('--exp_num', type=int, default=3, help='The number of experiments.')
 
     return parser
 
 
 def main():
     args = get_args_parser().parse_args()
-    running_name = 'unionb_{}_{}_{}'.format(args.dataset, args.network, args.expert_num)
-    wandb.init(project='chaoyang_unionb', name=running_name, config=args) if args.wandb else None
+    for exp in range(args.exp_num):
+        running_name = 'unionb_{}_{}_{}_exp_{}'.format(args.dataset, args.network, args.expert_num, exp)
+        wandb.init(project='cifar100_unionb', name=running_name, config=args) if args.wandb else None
 
-    print(args)
-    print("Start Training...")
+        print(args)
+        print("Start Training...")
 
-    if not os.path.exists(args.checkpoint_dir):
-        # Create the directory
-        os.makedirs(args.checkpoint_dir)
-        print('== Creating the paths for saving the checkpoints...')
+        if not os.path.exists(args.checkpoint_dir):
+            # Create the directory
+            os.makedirs(args.checkpoint_dir)
+            print('== Creating the paths for saving the checkpoints...')
 
-    train_dataloader = build_dataset(is_train=True, args=args)
-    test_dataloader = build_dataset(is_train=False, args=args)
+        train_dataloader = build_dataset(is_train=True, args=args)
+        test_dataloader = build_dataset(is_train=False, args=args)
 
-    model = SuperLayer(args)
+        model = SuperLayer(args)
 
-    for epoch in range(args.start_epoch, args.epochs):
-        model.train_one_epoch(train_dataloader, epoch)
-        model.val(test_dataloader, epoch)
+        for epoch in range(args.start_epoch, args.epochs):
+            model.train_one_epoch(train_dataloader, epoch)
+            print('== Start to evaluate the model...')
+            model.val(test_dataloader, epoch)
 
-    model.save_matrix()
+        print('== Finished Training...')
+        model.save_matrix()
 
 
 if __name__ == '__main__':

@@ -9,6 +9,8 @@ import utils
 from sklearn.metrics import accuracy_score
 import os
 import wandb
+import ipdb
+from tqdm import tqdm
 
 class SuperLayer(nn.Module):
     def __init__(self, args):
@@ -44,7 +46,7 @@ class SuperLayer(nn.Module):
         self.model.train()
         total_loss = 0
 
-        for batch_idx, (img, gt_label, eps) in enumerate(train_loader):
+        for batch_idx, (img, gt_label, eps) in tqdm(enumerate(train_loader)):
 
             ep = eps.to(self.device)  # ep is the annotators' labels.
             img = img.to(self.device)
@@ -66,8 +68,8 @@ class SuperLayer(nn.Module):
             torch.save(checkpoint, os.path.join(self.args.checkpoint_dir, 'unionb_checkpoint_{}.pth'.format(epoch)))
 
         self.lr_scheduler.step(epoch)
-        print('Epoch: {} | total_loss: {:.4f}'.format(epoch, total_loss))
-        wandb.log({"Train Loss": total_loss})
+        print('Epoch: {} | total_loss: {:.4f}'.format(epoch, total_loss / len(train_loader.dataset)))
+        wandb.log({"Train Loss": total_loss}) if self.args.wandb else None
 
     def train_batch_new(self, images, ep):
         y_hat = self.model(images)
@@ -90,7 +92,7 @@ class SuperLayer(nn.Module):
     def weights_init(self):
         """Initialization of the Transition Matrix T"""
         epsilon = 0.00001
-        if self.dataset_name == "Chaoyang":
+        if self.dataset_name == "Chaoyang" or self.dataset_name == "cifar100":
             theta = (1 - epsilon) * torch.eye(self.num_classes) + epsilon / (self.num_classes - 1) * (
                     1 - torch.eye(self.num_classes))
             self.model.super.weight.data = theta.repeat(self.expert_num, 1)
@@ -113,7 +115,7 @@ class SuperLayer(nn.Module):
             nonlocal y_hat
             y_hat = o.detach()
 
-        for batch_idx, (img, gt_label) in enumerate(test_loader):
+        for batch_idx, (img, gt_label) in tqdm(enumerate(test_loader)):
             img = img.to(self.device)
             gt_label = gt_label.to(self.device)  # y_hat
 
@@ -123,16 +125,16 @@ class SuperLayer(nn.Module):
             loss_y_hat = criterion(y_hat, gt_label)
 
             loss_hat += loss_y_hat.item()
-            if self.num_classes < 5:
+            # if self.num_classes < 5:
                 # ipdb.set_trace()
                 # self.accuracy.update(y_hat.argmax(-1), gt_label)
-                acc1 = accuracy_score(y_hat.argmax(-1).cpu(), gt_label.cpu())
-                print('Iter: {} / {}  Acc: {:.3f}'.format(batch_idx, len(test_loader), acc1))
-                metric_logger.meters['acc1'].update(acc1, n=self.batch_size)
+            acc1 = accuracy_score(y_hat.argmax(-1).cpu(), gt_label.cpu())
+            # print('Iter: {} / {}  Acc: {:.3f}'.format(batch_idx, len(test_loader), acc1))
+            metric_logger.meters['acc1'].update(acc1, n=self.batch_size)
             hook.remove()
-
+        # ipdb.set_trace()
         avg_loss_hat = loss_hat / len(test_loader.dataset)
         
         print(f'Epoch : {epoch}  Val Average y_hat loss: {avg_loss_hat}')
         print(f'Epoch : {epoch}, Val Average Accuracy: {metric_logger.acc1.avg}')
-        wandb.log({"Val Average y_hat loss": avg_loss_hat, "Val Average Accuracy": metric_logger.acc1.avg})
+        wandb.log({"Val Average y_hat loss": avg_loss_hat, "Val Average Accuracy": metric_logger.acc1.avg}) if self.args.wandb else None
